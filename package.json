@@ -1,0 +1,26 @@
+{
+  "name": "static_randompicapi",
+  "version": "1.0.0",
+  "description": "这是一个纯静态的随机图 API 解决方案。它不依赖任何后端逻辑（如 Cloudflare Workers 或 Python 服务器），完全依靠构建时生成的静态资源和客户端 JavaScript 实现随机图功能。",
+  "main": "build.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/afoim/Static_RandomPicAPI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/afoim/Static_RandomPicAPI/issues"
+  },
+  "homepage": "https://github.com/afoim/Static_RandomPicAPI#readme",
+  "dependencies": {
+    "imagesloaded": "^5.0.0",
+    "lozad": "^1.16.0",
+    "masonry-layout": "^4.2.2"
+  }
+}
