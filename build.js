@@ -106,7 +106,7 @@ function build() {
     
     // Support relative paths for testing on preview domains and when served from the same origin
     if (typeof window !== 'undefined') {
-        if (window.location.origin === domain || window.location.hostname.endsWith('.pages.dev')) {
+        if (window.location.origin === domain) {
             domain = '';
         }
     }
