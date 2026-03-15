@@ -51,12 +51,14 @@ function build() {
 
     console.log(`Using domain prefix: "${config.domain}"`);
 
-    // 1. Clean/Create Dist
-    if (fs.existsSync(DIST)) {
-        fs.rmSync(DIST, { recursive: true, force: true });
+    // 1. Prepare Dist
+    if (!fs.existsSync(DIST)) {
+        fs.mkdirSync(DIST, { recursive: true });
     }
-    fs.mkdirSync(DIST, { recursive: true });
-    fs.mkdirSync(DIST_RI, { recursive: true });
+    // Instead of deleting the whole folder (which fails on Windows if server is running),
+    // we just ensure the subfolders exist and overwrite files.
+    if (!fs.existsSync(DIST_RI)) fs.mkdirSync(DIST_RI, { recursive: true });
+    
     // Add .nojekyll to prevent Jekyll from processing the folder
     fs.writeFileSync(path.join(DIST, '.nojekyll'), '');
 
@@ -249,12 +251,14 @@ function build() {
             console.log('Copied index.html to dist');
         } else {
             console.log('index.html is empty, creating a demo page in dist...');
-            createDemoHtml();
+            createDemoHtml(counts);
         }
     } else {
-        createDemoHtml();
+        createDemoHtml(counts);
     }
 
+    // 3. Generate Hero Home Page (Always use the React one for Premium experience)
+    createDemoHtml(counts);
     // 4. Generate api.json for external consumption
     const apiData = {
         lastBuild: new Date().toISOString(),
@@ -275,271 +279,208 @@ function build() {
 }
 
 function createGalleryHtml(counts, config) {
-    const domain = config.domain;
     const types = Object.keys(counts);
 
-    // 1. Prepare Libs in dist/lib
-    const libDir = path.join(DIST, 'lib');
-    fs.mkdirSync(libDir, { recursive: true });
+    // Read assets to inline
+    const readAsset = (name) => {
+        const p = path.join(ROOT, 'assets', name);
+        if (fs.existsSync(p)) { console.log('Inlining ' + name); return fs.readFileSync(p, 'utf8'); }
+        console.warn('WARNING: assets/' + name + ' not found!'); return '';
+    };
+    const etherCode = readAsset('liquid-ether-engine.js');
+    const appCode = readAsset('gallery-app.jsx');
 
-    try {
-        // Try to copy from node_modules if they exist
-        const masonrySrc = path.join(ROOT, 'node_modules', 'masonry-layout', 'dist', 'masonry.pkgd.min.js');
-        const imagesLoadedSrc = path.join(ROOT, 'node_modules', 'imagesloaded', 'imagesloaded.pkgd.min.js');
-        const lozadSrc = path.join(ROOT, 'node_modules', 'lozad', 'dist', 'lozad.min.js');
-
-        if (fs.existsSync(masonrySrc)) fs.copyFileSync(masonrySrc, path.join(libDir, 'masonry.pkgd.min.js'));
-        if (fs.existsSync(imagesLoadedSrc)) fs.copyFileSync(imagesLoadedSrc, path.join(libDir, 'imagesloaded.pkgd.min.js'));
-        if (fs.existsSync(lozadSrc)) fs.copyFileSync(lozadSrc, path.join(libDir, 'lozad.min.js'));
-    } catch (e) {
-        console.warn('Could not copy libraries. Ensure npm install is run.', e);
-    }
-
-    let galleryContent = '';
-
-    // 2. Generate Sections per Type
-    let navButtons = `<button class="filter-btn active" onclick="filterGallery('all')">All</button>`;
-
+    // Build image data JSON
+    const imageData = {};
     types.forEach(type => {
         const count = counts[type];
         if (count === 0) return;
-
-        const maxPreview = 100;
-        navButtons += `<button class="filter-btn" onclick="filterGallery('${type}')">${type.toUpperCase()} (${count})</button>`;
-
-        let itemsHtml = '';
-        // Sample images if there are too many
-        const step = count > maxPreview ? Math.floor(count / maxPreview) : 1;
-        for (let i = 1; i <= count; i += step) {
-            const url = `/ri/${type}/${i}.webp`;
-            // Add aspect-ratio placeholder to prevent layout shift
-            const aspectRatio = type === 'h' ? '16/9' : '9/16';
-            itemsHtml += `\n            <div class="grid-item" style="aspect-ratio: ${aspectRatio};"><img class="lozad" data-src="${url}" alt="${type}-${i}"></div>`;
-            if (itemsHtml.split('grid-item').length > maxPreview) break;
-        }
-
-        galleryContent += `
-        <section id="section-${type}" class="gallery-section">
-            <h2>Folder: ${type} (Showing sample of ${Math.min(count, maxPreview)} images)</h2>
-            <div class="grid" id="grid-${type}">
-                <div class="grid-sizer"></div>` + itemsHtml + `
-            </div>
-        </section>
-        `;
+        const max = 100, step = count > max ? Math.floor(count / max) : 1, imgs = [];
+        for (let i = 1; i <= count && imgs.length < max; i += step)
+            imgs.push({ id: type + '-' + i, src: '/ri/' + type + '/' + i + '.webp', type });
+        imageData[type] = { images: imgs, total: count };
     });
 
-    const htmlContent = `<!DOCTYPE html>
-<html lang="zh-CN">
+    const html = `<!DOCTYPE html>
+<html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gallery - Static Random Pic API</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f2f5;
-        }
-        h1 { text-align: center; color: #333; margin-bottom: 20px; }
-        
-        /* Filter Nav */
-        .filter-nav { text-align: center; margin-bottom: 30px; }
-        .filter-btn {
-            background: #fff; border: 1px solid #ddd; padding: 8px 16px; margin: 0 5px;
-            border-radius: 20px; cursor: pointer; transition: all 0.2s; font-size: 14px;
-            color: #555;
-        }
-        .filter-btn:hover { background: #f8f9fa; border-color: #ccc; }
-        .filter-btn.active { background: #007bff; color: white; border-color: #007bff; }
-
-        h2 { border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top: 40px; color: #555; text-transform: uppercase; font-size: 1.2rem; }
-        
-        /* Masonry Grid */
-        .grid {
-            margin: 0 auto;
-        }
-        .grid-sizer, .grid-item {
-            width: 23%; /* 4 columns by default */
-            margin-bottom: 10px;
-        }
-        .grid-item {
-            float: left;
-            background: #fff;
-            border-radius: 4px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            background-color: #eee;
-            transition: background-color 0.3s;
-        }
-        /* When loaded, remove min-height constraint so it fits content exactly */
-        .grid-item.content-loaded {
-            min-height: 0;
-            background-color: #fff;
-        }
-        
-        .grid-item img {
-            display: block;
-            width: 100%;
-            height: auto;
-            opacity: 0;
-            transition: opacity 0.4s;
-        }
-        /* Fade in when loaded */
-        .grid-item img[data-loaded="true"] {
-            opacity: 1;
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .grid-sizer, .grid-item { width: 31%; }
-        }
-        @media (max-width: 800px) {
-            .grid-sizer, .grid-item { width: 48%; }
-        }
-        @media (max-width: 500px) {
-            .grid-sizer, .grid-item { width: 100%; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Gallery ??Static Random Pic API</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--a:#a78bfa;--ap:#f472b6;--ag:rgba(167,139,250,.35);--gl:rgba(255,255,255,.06);--gb:rgba(255,255,255,.1);--bg:#07070f;--text:#e2e8f0;--card-bg:rgba(255,255,255,.03);--card-border:rgba(255,255,255,.06);--card-hover:rgba(255,255,255,.18);--btn-bg:rgba(255,255,255,.06);--btn-hover:rgba(255,255,255,.1);--btn-on-bg:rgba(255,255,255,.9);--btn-on-text:#0f0f1a;--f:'Inter',system-ui,sans-serif;--fd:'Outfit',sans-serif;--e:cubic-bezier(.4,0,.2,1)}
+:root[data-theme='light']{--a:#8b5cf6;--ap:#ec4899;--ag:rgba(139,92,246,.25);--gl:rgba(0,0,0,.04);--gb:rgba(0,0,0,.1);--bg:#f8fafc;--text:#0f172a;--card-bg:rgba(255,255,255,.6);--card-border:rgba(0,0,0,.08);--card-hover:rgba(0,0,0,.15);--btn-bg:rgba(0,0,0,.05);--btn-hover:rgba(0,0,0,.1);--btn-on-bg:#0f172a;--btn-on-text:#fff}
+html{scroll-behavior:smooth}
+body{font-family:var(--f);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .4s var(--e),color .4s var(--e)}
+body.hide-cursor,body.hide-cursor *{cursor:none!important}
+#ether-bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+.cur-dot{position:fixed;top:-6px;left:-6px;width:12px;height:12px;border-radius:50%;background:var(--a);pointer-events:none;z-index:99999;mix-blend-mode:difference;transition:width .2s,height .2s,top .2s,left .2s,background .2s}
+.cur-dot.h{width:44px;height:44px;top:-22px;left:-22px;background:rgba(167,139,250,.12);border:1.5px solid var(--a)}
+.cur-ring{position:fixed;top:-22px;left:-22px;width:44px;height:44px;border-radius:50%;border:1px solid rgba(167,139,250,.25);pointer-events:none;z-index:99998;transition:width .3s,height .3s,top .3s,left .3s,border-color .3s,opacity .3s}
+.cur-ring.h{width:64px;height:64px;top:-32px;left:-32px;border-color:rgba(244,114,182,.35);opacity:.4}
+@media(hover:none){.cur-dot,.cur-ring{display:none!important}body.hide-cursor,body.hide-cursor *{cursor:auto!important}}
+.app{position:relative;z-index:1;max-width:1480px;margin:0 auto;padding:16px 24px 80px;min-height:100vh}
+.nav-btn{position:fixed;top:32px;z-index:9999;width:48px;height:48px;border-radius:50%;background:var(--btn-bg);border:1px solid var(--gb);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s var(--e);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);text-decoration:none;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.nav-btn:hover{transform:translateY(-2px) scale(1.1);box-shadow:0 12px 48px var(--ag);border-color:var(--a)}
+.nav-btn-right{right:32px}
+.nav-btn-left{left:32px}
+.hdr{text-align:center;padding:14px 0 22px}
+.hdr h1{font-family:var(--fd);font-weight:900;font-size:clamp(2rem,5vw,3.4rem);background:linear-gradient(135deg,#fff 0%,var(--a) 50%,var(--ap) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px;line-height:1.1}
+.sub{font-size:.85rem;color:var(--text);opacity:.5;font-weight:300;margin-top:4px;letter-spacing:1.5px;text-transform:uppercase}
+.fbar{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:28px}
+.fc{font-family:var(--f);padding:8px 20px;border-radius:999px;border:1px solid var(--gb);background:var(--btn-bg);color:var(--text);opacity:.7;font-size:.82rem;font-weight:500;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:all .25s var(--e);user-select:none;outline:none}
+.fc:hover{background:var(--btn-hover);opacity:1;border-color:var(--gb);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.15)}
+.fc.on{background:var(--btn-on-bg);color:var(--btn-on-text);opacity:1;border-color:transparent;font-weight:600;box-shadow:0 0 25px var(--ag);transform:translateY(-1px)}
+.masonry-js{display:flex;gap:16px;align-items:flex-start}
+.masonry-col{display:flex;flex-direction:column;gap:16px;flex:1;min-width:0}
+@media(max-width:860px){.masonry-js{gap:12px}.masonry-col{gap:12px}}
+.gallery-card{position:relative;border-radius:14px;overflow:hidden;animation:cReveal .6s cubic-bezier(.16,1,.3,1) both;animation-delay:var(--d,0ms);transition:transform .12s ease-out,box-shadow .3s var(--e),background .4s var(--e),border-color .4s var(--e);transform-style:preserve-3d;will-change:transform;background:var(--card-bg);border:1px solid var(--card-border);min-height:200px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+@keyframes cReveal{from{opacity:0;transform:translateY(30px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.gallery-card:hover{box-shadow:0 25px 60px rgba(0,0,0,.3),0 0 30px var(--ag);border-color:var(--card-hover);z-index:2}
+.gallery-card img{display:block;width:100%;height:auto;opacity:0;transition:opacity .6s var(--e);min-height:200px;object-fit:cover;background:rgba(0,0,0,.05)}
+.gallery-card img.ok{opacity:1}
+.shine{position:absolute;inset:0;background:radial-gradient(circle at var(--sx,50%) var(--sy,50%),rgba(255,255,255,.12),transparent 50%);opacity:0;transition:opacity .3s;pointer-events:none}
+.gallery-card:hover .shine{opacity:1}
+.shim{width:100%;padding-bottom:66%;background:linear-gradient(110deg,rgba(255,255,255,.02) 30%,rgba(255,255,255,.06) 50%,rgba(255,255,255,.02) 70%);background-size:200% 100%;animation:shm 1.5s ease-in-out infinite}
+@keyframes shm{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.lb{position:fixed;inset:0;z-index:10000;background:rgba(5,5,16,.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);display:flex;align-items:center;justify-content:center;animation:lbIn .3s var(--e)}
+.lb.lb-out{animation:lbOut .22s var(--e) forwards}
+@keyframes lbIn{from{opacity:0}to{opacity:1}}
+@keyframes lbOut{from{opacity:1}to{opacity:0}}
+.lb-wrap{position:relative;display:flex;align-items:center;justify-content:center}
+.lb-wrap img{max-width:88vw;max-height:88vh;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.6);transition:transform .08s ease-out,opacity .3s;opacity:0;user-select:none}
+.lb-wrap img.lb-ok{opacity:1}
+.lb-nav{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:all .25s var(--e);outline:none}
+.lb-prev{left:24px}.lb-next{right:24px}
+.lb-nav:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);transform:translateY(-50%) scale(1.12);color:#fff;box-shadow:0 0 20px var(--ag)}
+.lb-count{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);font-size:.78rem;color:rgba(255,255,255,.35);font-weight:500;letter-spacing:2px;user-select:none}
+.lb-close{position:fixed;top:24px;right:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.5);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s var(--e);outline:none}
+.lb-close:hover{background:rgba(255,255,255,.12);color:#fff;transform:rotate(90deg)}
+.lb-spin{position:absolute;width:36px;height:36px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--a);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
+#root .init-loader{position:absolute;top:30vh;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9}
+.init-loader .init-spin{width:40px;height:40px;border:3px solid rgba(255,255,255,.08);border-top-color:var(--a);border-radius:50%;animation:sp 1s linear infinite}
+.init-loader p{color:rgba(255,255,255,.3);font-size:.85rem;letter-spacing:1px}
+</style>
 </head>
 <body>
-    <h1>Static Image Gallery</h1>
-    
-    <div class="filter-nav">
-        ${navButtons}
-    </div>
+<div id="ether-bg"></div>
+<div id="root"><div class="init-loader"><div class="init-spin"></div><p>Loading Gallery...</p></div></div>
 
-    ${galleryContent}
-
-    <!-- Libs from CDN for better reliability -->
-    <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
-    <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lozad/dist/lozad.min.js"></script>
-    <script>
-        var masonryInstances = [];
-
-        document.addEventListener('DOMContentLoaded', function() {
-            var grids = document.querySelectorAll('.grid');
-            
-            // Initialize Masonry first
-            grids.forEach(function(grid) {
-                var msnry = new Masonry(grid, {
-                    itemSelector: '.grid-item',
-                    columnWidth: '.grid-sizer',
-                    percentPosition: true,
-                    gutter: 15
-                });
-                masonryInstances.push(msnry);
-            });
-
-            // Initialize Lozad (Lazy Loading)
-            let layoutTimer = null;
-            const observer = lozad('.lozad', {
-                rootMargin: '500px 0px',
-                loaded: function(el) {
-                    const onImgLoad = function() {
-                        el.setAttribute('data-loaded', true);
-                        el.closest('.grid-item').classList.add('content-loaded');
-                        
-                        // Throttle Masonry layout update to save CPU
-                        if (!layoutTimer) {
-                            layoutTimer = setTimeout(() => {
-                                masonryInstances.forEach(msnry => msnry.layout());
-                                layoutTimer = null;
-                            }, 300);
-                        }
-                    };
-
-                    if (el.complete) onImgLoad();
-                    else el.onload = onImgLoad;
-                }
-            });
-            observer.observe();
-
-            // Force a layout check after a short delay to ensure Masonry has set up correctly
-            setTimeout(() => {
-                masonryInstances.forEach(msnry => msnry.layout());
-            }, 100);
-        });
-
-        function filterGallery(type) {
-            // Update buttons
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            // Filter sections
-            document.querySelectorAll('.gallery-section').forEach(sec => {
-                if (type === 'all' || sec.id === 'section-' + type) {
-                    sec.style.display = 'block';
-                } else {
-                    sec.style.display = 'none';
-                }
-            });
-            
-            // Trigger Lozad observation on visible elements
-            // (Lozad observes viewport, but hiding/showing might affect it)
-            // Actually Lozad uses IntersectionObserver so it should handle it.
-            
-            setTimeout(() => {
-                masonryInstances.forEach(msnry => msnry.layout());
-            }, 10);
-        }
-    </script>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"><\/script>
+<script>
+${etherCode}
+<\/script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('ether-bg');if(b&&typeof LiquidEtherEngine!=='undefined'){try{new LiquidEtherEngine(b)}catch(e){console.warn('LiquidEther:',e)}}});
+<\/script>
+<script>window.__GALLERY_DATA__=${JSON.stringify(imageData)};<\/script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin><\/script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin><\/script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+<script type="text/babel">
+${appCode}
+<\/script>
 </body>
 </html>`;
 
-    fs.writeFileSync(path.join(DIST, 'gallery.html'), htmlContent);
-    console.log('Created gallery.html in dist');
+    fs.writeFileSync(path.join(DIST, 'gallery.html'), html);
+    console.log('Created gallery.html (React 18 + LiquidEther) in dist');
 }
 
-function createDemoHtml() {
-    const htmlContent = `<!DOCTYPE html>
-<html lang="zh-CN">
+function createDemoHtml(counts) {
+    const homeCode = fs.readFileSync(path.join(ROOT, 'assets', 'home-app.jsx'), 'utf8');
+    const etherCode = fs.readFileSync(path.join(ROOT, 'assets', 'liquid-ether-engine.js'), 'utf8');
+
+    const html = `<!DOCTYPE html>
+<html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Static Random Pic API Demo</title>
-    <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
-        .card { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
-        img { max-width: 100%; height: auto; border-radius: 4px; display: block; background: #eee; min-height: 200px; }
-        .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
-        .bg-box { width: 100%; height: 200px; background-size: cover; background-position: center; border-radius: 4px; border: 1px dashed #999; display: flex; align-items: center; justify-content: center; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Static Random Pic API - Premium Delivery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--a:#a78bfa;--ap:#f472b6;--ag:rgba(167,139,250,.35);--gl:rgba(255,255,255,.06);--gb:rgba(255,255,255,.1);--bg:#07070f;--text:#e2e8f0;--card-bg:rgba(255,255,255,.02);--card-border:rgba(255,255,255,.06);--card-hover:rgba(255,255,255,.15);--btn-bg:rgba(255,255,255,.9);--btn-text:#0f0f1a;--btn-sec-bg:var(--gl);--btn-sec-text:#fff;--f:'Inter',system-ui,sans-serif;--fd:'Outfit',sans-serif;--e:cubic-bezier(.16,1,.3,1)}
+:root[data-theme='light']{--a:#8b5cf6;--ap:#ec4899;--ag:rgba(139,92,246,.25);--gl:rgba(0,0,0,.04);--gb:rgba(0,0,0,.1);--bg:#f8fafc;--text:#0f172a;--card-bg:rgba(255,255,255,.6);--card-border:rgba(0,0,0,.08);--card-hover:rgba(0,0,0,.15);--btn-bg:#0f172a;--btn-text:#fff;--btn-sec-bg:var(--gl);--btn-sec-text:#0f172a}
+html{scroll-behavior:smooth;overflow-y:scroll;min-height:100.1vh}
+body{font-family:var(--f);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .4s var(--e),color .4s var(--e)}
+body.hide-cursor,body.hide-cursor *{cursor:none!important}
+#ether-bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+.cur-dot{position:fixed;top:-6px;left:-6px;width:12px;height:12px;border-radius:50%;background:var(--a);pointer-events:none;z-index:99999;mix-blend-mode:difference;transition:width .2s,height .2s,top .2s,left .2s,background .2s}
+.cur-dot.h{width:44px;height:44px;top:-22px;left:-22px;background:rgba(167,139,250,.12);border:1.5px solid var(--a)}
+.cur-ring{position:fixed;top:-22px;left:-22px;width:44px;height:44px;border-radius:50%;border:1px solid rgba(167,139,250,.25);pointer-events:none;z-index:99998;transition:width .3s,height .3s,top .3s,left .3s,border-color .3s,opacity .3s}
+.cur-ring.h{width:64px;height:64px;top:-32px;left:-32px;border-color:rgba(244,114,182,.35);opacity:.4}
+@media(hover:none){.cur-dot,.cur-ring{display:none!important}body.hide-cursor,body.hide-cursor *{cursor:auto!important}}
+.app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:40px 24px 120px;min-height:100vh;overflow-anchor:none}
+.flex-col{display:flex;flex-direction:column;align-items:center}
+.hero{text-align:center;padding:12vh 0 10vh}
+.hero-title{font-family:var(--fd);font-weight:900;font-size:clamp(2.5rem,7vw,4.8rem);background:linear-gradient(135deg,var(--text) 0%,var(--a) 50%,var(--ap) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1.5px;line-height:1.05;margin-bottom:12px}
+.hero-title span{display:inline-block;animation:float 4s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hero-sub{font-size:clamp(1rem,3vw,1.3rem);color:var(--text);opacity:.6;font-weight:300;letter-spacing:1px;margin-bottom:48px;max-width:600px;margin-left:auto;margin-right:auto}
+.hero-btns{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+.btn-primary,.btn-secondary{font-family:var(--f);padding:14px 32px;border-radius:999px;font-size:1rem;font-weight:600;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:all .3s var(--e);text-decoration:none;display:flex;align-items:center;gap:10px}
+.btn-primary{background:var(--btn-bg);color:var(--btn-text);border:1px solid transparent;box-shadow:0 0 25px var(--ag)}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 10px 40px var(--ag);border-color:var(--gb)}
+.btn-secondary{background:var(--btn-sec-bg);color:var(--btn-sec-text);border:1px solid var(--gb)}
+.nav-btn{position:fixed;top:32px;z-index:9999;width:48px;height:48px;border-radius:50%;background:var(--btn-bg);border:1px solid var(--gb);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s var(--e);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);text-decoration:none;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.nav-btn:hover{transform:translateY(-2px) scale(1.1);box-shadow:0 12px 48px var(--ag);border-color:var(--a)}
+.nav-btn-right{right:32px}
+.nav-btn-left{left:32px}
+.live-demo{margin-top:20px;width:100%;max-width:1400px;margin-left:auto;margin-right:auto}
+.section-title{font-family:var(--fd);font-size:2.8rem;font-weight:900;text-align:center;margin-bottom:48px;letter-spacing:-0.02em}
+.demo-stack{display:flex;flex-direction:column;gap:64px;width:100%}
+.v-card-wrap{width:100%;display:flex;justify-content:center}
+.v-card-wrap .demo-card{width:100%;max-width:720px}
+.demo-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:32px;padding:48px;transition:transform .15s ease-out,box-shadow .4s var(--e),background .4s var(--e),border-color .4s var(--e);transform-style:preserve-3d;will-change:transform;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);contain:layout}
+.demo-card:hover{box-shadow:0 30px 80px rgba(0,0,0,.2),0 0 40px var(--ag);border-color:var(--card-hover);background:var(--card-hover);z-index:2}
+.demo-header{margin-bottom:20px}
+.demo-header h3{font-family:var(--fd);font-size:1.8rem;color:var(--text);font-weight:700;margin-bottom:8px}
+.code-hint{font-family:monospace;font-size:.85rem;color:var(--text);opacity:.7;background:var(--gl);padding:6px 14px;border-radius:6px;display:inline-block;border:1px solid var(--gb)}
+.demo-img-box{position:relative;width:100%;border-radius:12px;overflow:hidden;background:rgba(0,0,0,.05);cursor:pointer;contain:size layout;display:block}
+.demo-img-box img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .6s var(--e);display:block;backface-visibility:hidden}
+.demo-img-box img.ok{opacity:1}
+.demo-img-box .shim{position:absolute;inset:0;z-index:1;background:linear-gradient(110deg,rgba(255,255,255,.02) 30%,rgba(255,255,255,.06) 50%,rgba(255,255,255,.02) 70%);background-size:200% 100%;animation:shm 1.5s ease-in-out infinite;pointer-events:none}
+.refresh-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,.7);backdrop-filter:blur(12px);color:#fff;font-size:.75rem;padding:8px 20px;border-radius:99px;opacity:0;transition:all .3s var(--e);border:1px solid rgba(255,255,255,.1);pointer-events:none;z-index:2}
+.demo-card:hover .refresh-hint{opacity:1;transform:translateX(-50%) translateY(0)}
+.shine{position:absolute;inset:0;background:radial-gradient(circle at var(--sx,50%) var(--sy,50%),rgba(255,255,255,.12),transparent 50%);opacity:0;transition:opacity .3s;pointer-events:none;z-index:3}
+.demo-card:hover .shine{opacity:1}
+.shim{position:absolute;inset:0;background:linear-gradient(110deg,rgba(255,255,255,.02) 30%,rgba(255,255,255,.06) 50%,rgba(255,255,255,.02) 70%);background-size:200% 100%;animation:shm 1.5s ease-in-out infinite}
+@keyframes shm{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
 </head>
 <body>
-    <h1>Static Random Pic API (Client-Side)</h1>
-    <p>
-        This is a static implementation. Images are randomized at build time.
-        <a href="gallery.html" class="btn" style="float: right;">View Gallery</a>
-    </p>
+<div id="ether-bg"></div>
+<div id="root"></div>
 
-    <div class="card">
-        <h2>Horizontal Image (横屏)</h2>
-        <p>Using <code>&lt;img alt="random:h"&gt;</code>:</p>
-        <!-- Logic: Script finds alt="random:h" and sets src -->
-        <img alt="random:h" title="Random Horizontal Image" />
-        <br>
-        
-        <p>Background Image (<code>data-random-bg="h"</code>):</p>
-        <!-- Logic: Script finds data-random-bg="h" and sets style.backgroundImage -->
-        <div class="bg-box" data-random-bg="h">
-            Background Image
-        </div>
-    </div>
-
-    <div class="card">
-        <h2>Vertical Image (竖屏)</h2>
-        <p>Using <code>&lt;img alt="random:v"&gt;</code>:</p>
-        <img alt="random:v" style="max-height: 400px;" title="Random Vertical Image" />
-    </div>
-
-    <!-- Import the single generated script -->
-    <script src="random.js"></script>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"><\/script>
+<script>
+${etherCode}
+<\/script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('ether-bg');if(b&&typeof LiquidEtherEngine!=='undefined'){try{new LiquidEtherEngine(b,{colors:['#FF2A54','#a78bfa','#38BDF8'],autoIntensity:1.5})}catch(e){console.warn('LiquidEther:',e)}}});
+<\/script>
+<script>window.__COUNTS__=${JSON.stringify(counts)};<\/script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin><\/script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin><\/script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+<script type="text/babel">
+${homeCode}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<HomeApp />);
+<\/script>
 </body>
 </html>`;
-    fs.writeFileSync(path.join(DIST, 'index.html'), htmlContent);
-    console.log('Created demo index.html in dist');
+    fs.writeFileSync(path.join(DIST, 'index.html'), html);
+    console.log('Created premium index.html (React 18) in dist');
 }
 
 build();

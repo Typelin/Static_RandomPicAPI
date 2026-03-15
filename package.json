@@ -21,6 +21,7 @@
   "dependencies": {
     "imagesloaded": "^5.0.0",
     "lozad": "^1.16.0",
-    "masonry-layout": "^4.2.2"
+    "masonry-layout": "^4.2.2",
+    "puppeteer": "^24.39.0"
   }
 }
