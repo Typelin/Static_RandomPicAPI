@@ -155,8 +155,8 @@ function HomeApp() {
             <a href="https://github.com/afoim/Static_RandomPicAPI" target="_blank" className="btn-secondary interactive">
               <span>Original Source</span>
             </a>
-            <a href="#" onClick={(e) => { e.preventDefault(); alert('如果有意部屬此專案，請支持主人喝一杯咖啡！網址對接中...'); }} className="btn-secondary interactive">
-              <span>☕ 支持我喝杯咖啡</span>
+            <a href="https://github.com/typelin/Static_RandomPicAPI" target="_blank" className="btn-secondary interactive">
+              <span>Support Development</span>
             </a>
           </div>
         </header>

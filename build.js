@@ -422,8 +422,8 @@ body.hide-cursor,body.hide-cursor *{cursor:none!important}
 .app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:40px 24px 120px;min-height:100vh;overflow-anchor:none}
 .flex-col{display:flex;flex-direction:column;align-items:center}
 .hero{text-align:center;padding:12vh 0 10vh}
-.hero-title{font-family:var(--fd);font-weight:900;font-size:clamp(2.5rem,7vw,4.8rem);background:linear-gradient(135deg,var(--text) 0%,var(--a) 50%,var(--ap) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1.5px;line-height:1.05;margin-bottom:12px}
-.hero-title span{display:inline-block;animation:float 4s ease-in-out infinite}
+.hero-title{font-family:var(--fd);font-size:clamp(2.5rem,8vw,5rem);font-weight:800;letter-spacing:-1px;margin-bottom:24px;background:linear-gradient(135deg,var(--text) 0%,var(--a) 50%,var(--ap) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;padding:20px 0}
+.hero-title span{display:inline-block;background:inherit;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:float 4s ease-in-out infinite;vertical-align:middle}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .hero-sub{font-size:clamp(1rem,3vw,1.3rem);color:var(--text);opacity:.6;font-weight:300;letter-spacing:1px;margin-bottom:48px;max-width:600px;margin-left:auto;margin-right:auto}
 .hero-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;max-width:900px;margin:0 auto}
