@@ -426,8 +426,8 @@ body.hide-cursor,body.hide-cursor *{cursor:none!important}
 .hero-title span{display:inline-block;animation:float 4s ease-in-out infinite}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .hero-sub{font-size:clamp(1rem,3vw,1.3rem);color:var(--text);opacity:.6;font-weight:300;letter-spacing:1px;margin-bottom:48px;max-width:600px;margin-left:auto;margin-right:auto}
-.hero-btns{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
-.btn-primary,.btn-secondary{font-family:var(--f);padding:14px 32px;border-radius:999px;font-size:1rem;font-weight:600;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:all .3s var(--e);text-decoration:none;display:flex;align-items:center;gap:10px}
+.hero-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;max-width:900px;margin:0 auto}
+.btn-primary,.btn-secondary{font-family:var(--f);padding:14px 28px;border-radius:999px;font-size:0.95rem;font-weight:600;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:all .3s var(--e);text-decoration:none;display:flex;align-items:center;gap:10px;white-space:nowrap}
 .btn-primary{background:var(--btn-bg);color:var(--btn-text);border:1px solid transparent;box-shadow:0 0 25px var(--ag)}
 .btn-primary:hover{transform:translateY(-3px);box-shadow:0 10px 40px var(--ag);border-color:var(--gb)}
 .btn-secondary{background:var(--btn-sec-bg);color:var(--btn-sec-text);border:1px solid var(--gb)}
