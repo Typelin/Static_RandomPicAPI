@@ -17,9 +17,65 @@ function useTheme() {
   return { theme, toggle };
 }
 
+const translations = {
+  tw: {
+
+    title: "靜態隨機圖片",
+    subtitle: "高品質、極致優化的圖片分發服務",
+    viewGallery: "進入畫廊",
+    githubCore: "本項目 GitHub",
+    originalSource: "原項目 GitHub",
+    myChanges: "優化項目：全新視覺畫廊、亮暗主題切換、國際化多語系支援，以及極致平滑的 UI/UX 優化。",
+    contactMe: "聯絡我",
+    liveDemo: "即時 API 演示",
+    horizontal: "橫向圖片",
+    vertical: "直向圖片",
+    refresh: "重骰圖片"
+  },
+  en: {
+
+    title: "Static Random Pic",
+    subtitle: "A premium, highly-optimized image delivery service",
+    viewGallery: "View Gallery",
+    githubCore: "Project GitHub",
+    originalSource: "Original GitHub",
+    myChanges: "Key Enhancements: New Visual Gallery, Light/Dark mode, I18n support, and premium UI/UX optimizations.",
+    contactMe: "Contact Me",
+    liveDemo: "Live API Demo",
+    horizontal: "Horizontal Pictures",
+    vertical: "Vertical Pictures",
+    refresh: "Re-roll"
+  }
+};
+
+function useLanguage() {
+  const [lang, setLang] = useState(localStorage.getItem('srp-lang') || 'tw');
+  const t = translations[lang];
+  const toggle = () => {
+    const next = lang === 'tw' ? 'en' : 'tw';
+    setLang(next);
+    localStorage.setItem('srp-lang', next);
+    window.dispatchEvent(new CustomEvent('langchange', { detail: next }));
+  };
+  useEffect(() => {
+    const fn = e => setLang(e.detail);
+    window.addEventListener('langchange', fn);
+    return () => window.removeEventListener('langchange', fn);
+  }, []);
+  return { lang, t, toggle };
+}
+
+function LanguageToggle({ lang, toggle }) {
+  return (
+    <button className="nav-btn nav-btn-lang interactive" onClick={toggle} title="Switch Language">
+      <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{lang === 'tw' ? 'EN' : '繁'}</span>
+    </button>
+  );
+}
+
 function ThemeToggle({ theme, toggle }) {
   return (
-    <button className="nav-btn nav-btn-right interactive" onClick={toggle} title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}>
+    <button className="nav-btn interactive" onClick={toggle} title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}>
       {theme === 'dark' ? (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
       ) : (
@@ -134,39 +190,50 @@ function DemoCard({ type, label }) {
 }
 
 function HomeApp() {
-  const { theme, toggle } = useTheme();
+  const { theme, toggle: toggleTheme } = useTheme();
+  const { lang, t, toggle: toggleLang } = useLanguage();
 
   return (
     <>
       <GlowCursor />
-      <ThemeToggle theme={theme} toggle={toggle} />
+
+
+      <div className="nav-group-right">
+        <LanguageToggle lang={lang} toggle={toggleLang} />
+        <ThemeToggle theme={theme} toggle={toggleTheme} />
+      </div>
+
       <div className="app flex-col">
         <header className="hero">
-          <h1 className="hero-title">Static Random Pic <span>API</span></h1>
-          <p className="hero-sub">A premium, highly-optimized image delivery service</p>
+          <h1 className="hero-title">{t.title} <span>API</span></h1>
+          <p className="hero-sub">{t.subtitle}</p>
           <div className="hero-btns">
             <a href="gallery.html" className="btn-primary interactive">
-              <span>View Gallery</span>
+              <span>{t.viewGallery}</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
             <a href="https://github.com/typelin/Static_RandomPicAPI" target="_blank" className="btn-secondary interactive">
-              <span>GitHub Core</span>
+              <span>{t.githubCore}</span>
             </a>
             <a href="https://github.com/afoim/Static_RandomPicAPI" target="_blank" className="btn-secondary interactive">
-              <span>Original Source</span>
+              <span>{t.originalSource}</span>
             </a>
-            <a href="https://github.com/typelin/Static_RandomPicAPI" target="_blank" className="btn-secondary interactive">
-              <span>Support Development</span>
+          </div>
+          <p className="hero-note" style={{ marginTop: '24px', opacity: 0.5, fontSize: '0.9rem' }}>{t.myChanges}</p>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+            <a href="https://typelin.pages.dev/#footer" target="_blank" className="btn-secondary interactive">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+              <span>{t.contactMe}</span>
             </a>
           </div>
         </header>
 
         <section className="live-demo">
-          <h2 className="section-title">Live API Demo</h2>
+          <h2 className="section-title">{t.liveDemo}</h2>
           <div className="demo-stack">
-            <DemoCard type="h" label="Horizontal Pictures" />
+            <DemoCard type="h" label={t.horizontal} />
             <div className="v-card-wrap">
-              <DemoCard type="v" label="Vertical Pictures" />
+              <DemoCard type="v" label={t.vertical} />
             </div>
           </div>
         </section>

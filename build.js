@@ -287,7 +287,6 @@ function createGalleryHtml(counts, config) {
         if (fs.existsSync(p)) { console.log('Inlining ' + name); return fs.readFileSync(p, 'utf8'); }
         console.warn('WARNING: assets/' + name + ' not found!'); return '';
     };
-    const etherCode = readAsset('liquid-ether-engine.js');
     const appCode = readAsset('gallery-app.jsx');
 
     // Build image data JSON
@@ -306,7 +305,8 @@ function createGalleryHtml(counts, config) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Gallery ??Static Random Pic API</title>
+<title>Gallery - Static Random Pic API</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖼️</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
@@ -316,35 +316,39 @@ function createGalleryHtml(counts, config) {
 :root[data-theme='light']{--a:#8b5cf6;--ap:#ec4899;--ag:rgba(139,92,246,.25);--gl:rgba(0,0,0,.04);--gb:rgba(0,0,0,.1);--bg:#f8fafc;--text:#0f172a;--card-bg:rgba(255,255,255,.6);--card-border:rgba(0,0,0,.08);--card-hover:rgba(0,0,0,.15);--btn-bg:rgba(0,0,0,.05);--nav-btn-bg:rgba(0,0,0,.05);--btn-hover:rgba(0,0,0,.1);--btn-on-bg:#0f172a;--btn-on-text:#fff}
 html{scroll-behavior:smooth;overflow-y:scroll;min-height:100.1vh}
 body{font-family:var(--f);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .4s var(--e),color .4s var(--e)}
-body.hide-cursor,body.hide-cursor *{cursor:none!important}
-#ether-bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
-.cur-dot{position:fixed;top:-6px;left:-6px;width:12px;height:12px;border-radius:50%;background:var(--a);pointer-events:none;z-index:99999;mix-blend-mode:difference;transition:width .2s,height .2s,top .2s,left .2s,background .2s}
-.cur-dot.h{width:44px;height:44px;top:-22px;left:-22px;background:rgba(167,139,250,.12);border:1.5px solid var(--a)}
-.cur-ring{position:fixed;top:-22px;left:-22px;width:44px;height:44px;border-radius:50%;border:1px solid rgba(167,139,250,.25);pointer-events:none;z-index:99998;transition:width .3s,height .3s,top .3s,left .3s,border-color .3s,opacity .3s}
-.cur-ring.h{width:64px;height:64px;top:-32px;left:-32px;border-color:rgba(244,114,182,.35);opacity:.4}
-@media(hover:none){.cur-dot,.cur-ring{display:none!important}body.hide-cursor,body.hide-cursor *{cursor:auto!important}}
+/* Animated mesh gradient background - pure CSS, zero JS */
+.mesh-bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:.4;transition:opacity .4s;overflow:hidden;transform:translateZ(0);backface-visibility:hidden}
+.mesh-bg::before,.mesh-bg::after{content:'';position:absolute;border-radius:50%;filter:blur(120px);will-change:transform;backface-visibility:hidden;transform:translateZ(0);animation:meshDrift 20s ease-in-out infinite alternate}
+.mesh-bg::before{width:60vw;height:60vh;top:-10%;left:-10%;background:radial-gradient(circle,rgba(167,139,250,.5) 0%,transparent 70%);animation-delay:0s}
+.mesh-bg::after{width:50vw;height:50vh;bottom:-10%;right:-10%;background:radial-gradient(circle,rgba(244,114,182,.4) 0%,transparent 70%);animation-delay:-10s}
+.mesh-orb{position:absolute;border-radius:50%;filter:blur(100px);will-change:transform;backface-visibility:hidden;transform:translateZ(0);animation:meshDrift 25s ease-in-out infinite alternate-reverse}
+.mesh-orb:nth-child(1){width:40vw;height:40vh;top:30%;left:40%;background:radial-gradient(circle,rgba(56,189,248,.3) 0%,transparent 70%);animation-delay:-5s}
+@keyframes meshDrift{0%{transform:translate3d(0,0,0) scale(1)}25%{transform:translate3d(5vw,-8vh,0) scale(1.1)}50%{transform:translate3d(-3vw,6vh,0) scale(.95)}75%{transform:translate3d(8vw,3vh,0) scale(1.05)}100%{transform:translate3d(-5vw,-5vh,0) scale(1)}}
+:root[data-theme='light'] .mesh-bg{opacity:.25}
+:root[data-theme='light'] .mesh-bg::before{background:radial-gradient(circle,rgba(139,92,246,.35) 0%,transparent 70%)}
+:root[data-theme='light'] .mesh-bg::after{background:radial-gradient(circle,rgba(236,72,153,.25) 0%,transparent 70%)}
+:root[data-theme='light'] .mesh-orb:nth-child(1){background:radial-gradient(circle,rgba(56,189,248,.2) 0%,transparent 70%)}
 .app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:40px 24px 120px;min-height:100vh;overflow-anchor:none}
-.nav-btn{position:fixed;top:32px;z-index:9999;width:48px;height:48px;border-radius:50%;background:var(--nav-btn-bg);border:1px solid var(--gb);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s var(--e);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);text-decoration:none;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
-.nav-btn:hover{transform:translateY(-2px) scale(1.1);box-shadow:0 12px 48px var(--ag);border-color:var(--a)}
-.nav-btn-right{right:32px}
-.nav-btn-left{left:32px}
+.nav-group-right{position:fixed;top:32px;right:32px;z-index:9999;display:flex;gap:12px}
+.nav-group-left{position:fixed;top:32px;left:32px;z-index:9999;display:flex;gap:12px}
+.nav-btn{width:48px;height:48px;border-radius:14px;background:var(--nav-btn-bg);border:1px solid var(--gb);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s var(--e);text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,0.1)}
+.nav-btn:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 8px 32px var(--ag);border-color:var(--a)}
+.nav-btn-lang{width:54px}
 .hdr{text-align:center;padding:14px 0 22px}
 .hdr h1{font-family:var(--fd);font-weight:900;font-size:clamp(2rem,5vw,3.4rem);background:linear-gradient(135deg,#fff 0%,var(--a) 50%,var(--ap) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px;line-height:1.1}
 .sub{font-size:.85rem;color:var(--text);opacity:.5;font-weight:300;margin-top:4px;letter-spacing:1.5px;text-transform:uppercase}
 .fbar{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:28px}
-.fc{font-family:var(--f);padding:8px 20px;border-radius:999px;border:1px solid var(--gb);background:var(--btn-bg);color:var(--text);opacity:.7;font-size:.82rem;font-weight:500;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:all .25s var(--e);user-select:none;outline:none}
+.fc{font-family:var(--f);padding:8px 20px;border-radius:999px;border:1px solid var(--gb);background:var(--btn-bg);color:var(--text);opacity:.7;font-size:.82rem;font-weight:500;cursor:pointer;transition:all .25s var(--e);user-select:none;outline:none}
 .fc:hover{background:var(--btn-hover);opacity:1;border-color:var(--gb);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.15)}
 .fc.on{background:var(--btn-on-bg);color:var(--btn-on-text);opacity:1;border-color:transparent;font-weight:600;box-shadow:0 0 25px var(--ag);transform:translateY(-1px)}
 .masonry-js{display:flex;gap:16px;align-items:flex-start}
 .masonry-col{display:flex;flex-direction:column;gap:16px;flex:1;min-width:0}
-@media(max-width:860px){.masonry-js{gap:12px}.masonry-col{gap:12px}}
-.gallery-card{position:relative;border-radius:14px;overflow:hidden;animation:cReveal .6s cubic-bezier(.16,1,.3,1) both;animation-delay:var(--d,0ms);transition:transform .12s ease-out,box-shadow .3s var(--e),background .4s var(--e),border-color .4s var(--e);transform-style:preserve-3d;will-change:transform;background:var(--card-bg);border:1px solid var(--card-border);min-height:200px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-@keyframes cReveal{from{opacity:0;transform:translateY(30px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-.gallery-card:hover{box-shadow:0 25px 60px rgba(0,0,0,.3),0 0 30px var(--ag);border-color:var(--card-hover);z-index:2}
-.gallery-card img{display:block;width:100%;height:auto;opacity:0;transition:opacity .6s var(--e);min-height:200px;object-fit:cover;background:rgba(0,0,0,.05)}
+@media(max-width:860px){.masonry-js{gap:10px}.masonry-col{gap:10px}}
+.gallery-card{position:relative;border-radius:14px;overflow:hidden;animation:cReveal .5s cubic-bezier(.16,1,.3,1) both;animation-delay:var(--d,0ms);transition:transform .2s var(--e),box-shadow .3s var(--e);background:var(--card-bg);border:1px solid var(--card-border);min-height:120px;cursor:pointer}
+@keyframes cReveal{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.gallery-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(0,0,0,.25),0 0 20px var(--ag);border-color:var(--card-hover);z-index:2}
+.gallery-card img{display:block;width:100%;height:auto;opacity:0;transition:opacity .5s var(--e);min-height:120px;object-fit:cover;background:rgba(0,0,0,.05)}
 .gallery-card img.ok{opacity:1}
-.shine{position:absolute;inset:0;background:radial-gradient(circle at var(--sx,50%) var(--sy,50%),rgba(255,255,255,.12),transparent 50%);opacity:0;transition:opacity .3s;pointer-events:none}
-.gallery-card:hover .shine{opacity:1}
 .shim{width:100%;padding-bottom:66%;background:linear-gradient(110deg,rgba(255,255,255,.02) 30%,rgba(255,255,255,.06) 50%,rgba(255,255,255,.02) 70%);background-size:200% 100%;animation:shm 1.5s ease-in-out infinite}
 @keyframes shm{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .lb{position:fixed;inset:0;z-index:10000;background:rgba(5,5,16,.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);display:flex;align-items:center;justify-content:center;animation:lbIn .3s var(--e)}
@@ -352,9 +356,9 @@ body.hide-cursor,body.hide-cursor *{cursor:none!important}
 @keyframes lbIn{from{opacity:0}to{opacity:1}}
 @keyframes lbOut{from{opacity:1}to{opacity:0}}
 .lb-wrap{position:relative;display:flex;align-items:center;justify-content:center}
-.lb-wrap img{max-width:88vw;max-height:88vh;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.6);transition:transform .08s ease-out,opacity .3s;opacity:0;user-select:none}
+.lb-wrap img{max-width:88vw;max-height:88vh;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.6);transition:opacity .3s;opacity:0;user-select:none}
 .lb-wrap img.lb-ok{opacity:1}
-.lb-nav{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:all .25s var(--e);outline:none}
+.lb-nav{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s var(--e);outline:none}
 .lb-prev{left:24px}.lb-next{right:24px}
 .lb-nav:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);transform:translateY(-50%) scale(1.12);color:#fff;box-shadow:0 0 20px var(--ag)}
 .lb-count{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);font-size:.78rem;color:rgba(255,255,255,.35);font-weight:500;letter-spacing:2px;user-select:none}
@@ -363,34 +367,23 @@ body.hide-cursor,body.hide-cursor *{cursor:none!important}
 .lb-spin{position:absolute;width:36px;height:36px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--a);border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
-#root .init-loader{position:absolute;top:30vh;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9}
-.init-loader .init-spin{width:40px;height:40px;border:3px solid rgba(255,255,255,.08);border-top-color:var(--a);border-radius:50%;animation:sp 1s linear infinite}
-.init-loader p{color:rgba(255,255,255,.3);font-size:.85rem;letter-spacing:1px}
 </style>
 </head>
 <body>
-<div id="ether-bg"></div>
-<div id="root"><div class="init-loader"><div class="init-spin"></div><p>Loading Gallery...</p></div></div>
+<div class="mesh-bg"><div class="mesh-orb"></div></div>
+<div id="root"><div style="position:absolute;top:30vh;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:16px"><div style="width:40px;height:40px;border:3px solid rgba(255,255,255,.08);border-top-color:var(--a);border-radius:50%;animation:sp 1s linear infinite"></div><p style="color:rgba(255,255,255,.3);font-size:.85rem;letter-spacing:1px">Loading Gallery...</p></div></div>
 
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"><\/script>
-<script>
-${etherCode}
-<\/script>
-<script>
-document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('ether-bg');if(b&&typeof LiquidEtherEngine!=='undefined'){try{new LiquidEtherEngine(b)}catch(e){console.warn('LiquidEther:',e)}}});
-<\/script>
-<script>window.__GALLERY_DATA__=${JSON.stringify(imageData)};<\/script>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin><\/script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin><\/script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+<script>window.__GALLERY_DATA__=${JSON.stringify(imageData)};</script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script type="text/babel">
 ${appCode}
-<\/script>
+</script>
 </body>
 </html>`;
 
     fs.writeFileSync(path.join(DIST, 'gallery.html'), html);
-    console.log('Created gallery.html (React 18 + LiquidEther) in dist');
 }
 
 function createDemoHtml(counts) {
@@ -403,6 +396,7 @@ function createDemoHtml(counts) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Static Random Pic API - Premium Delivery</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖼️</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
@@ -421,7 +415,11 @@ body.hide-cursor,body.hide-cursor *{cursor:none!important}
 @media(hover:none){.cur-dot,.cur-ring{display:none!important}body.hide-cursor,body.hide-cursor *{cursor:auto!important}}
 .app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:40px 24px 120px;min-height:100vh;overflow-anchor:none}
 .flex-col{display:flex;flex-direction:column;align-items:center}
-.hero{text-align:center;padding:12vh 0 10vh}
+.hero{text-align:center;padding:8vh 0 10vh}
+.nav-group-right{position:fixed;top:32px;right:32px;z-index:10001;display:flex;gap:12px}
+.nav-btn{width:48px;height:48px;border-radius:50%;background:var(--nav-btn-bg);border:1px solid var(--gb);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s var(--e);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);text-decoration:none;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.nav-btn:hover{transform:translateY(-2px) scale(1.1);box-shadow:0 12px 48px var(--ag);border-color:var(--a)}
+.nav-btn-lang{width:54px}
 .hero-title{font-family:var(--fd);font-size:clamp(2.5rem,8vw,5rem);font-weight:800;letter-spacing:-1px;margin-bottom:24px;background:linear-gradient(135deg,var(--text) 0%,var(--a) 50%,var(--ap) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;padding:20px 0}
 .hero-title span{display:inline-block;background:inherit;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:float 4s ease-in-out infinite;vertical-align:middle}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
@@ -431,10 +429,11 @@ body.hide-cursor,body.hide-cursor *{cursor:none!important}
 .btn-primary{background:var(--btn-bg);color:var(--btn-text);border:1px solid transparent;box-shadow:0 0 25px var(--ag)}
 .btn-primary:hover{transform:translateY(-3px);box-shadow:0 10px 40px var(--ag);border-color:var(--gb)}
 .btn-secondary{background:var(--btn-sec-bg);color:var(--btn-sec-text);border:1px solid var(--gb)}
-.nav-btn{position:fixed;top:32px;z-index:100001;width:48px;height:48px;border-radius:50%;background:var(--nav-btn-bg);border:1px solid var(--gb);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s var(--e);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);text-decoration:none;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
-.nav-btn:hover{transform:translateY(-2px) scale(1.1);box-shadow:0 12px 48px var(--ag);border-color:var(--a)}
-.nav-btn-right{right:32px}
-.nav-btn-left{left:32px}
+.nav-group-right{position:fixed;top:32px;right:32px;z-index:10001;display:flex;gap:12px}
+.nav-group-left{position:fixed;top:32px;left:32px;z-index:10001;display:flex;gap:12px}
+.nav-btn-right{position:fixed;top:32px;right:32px;z-index:10001}
+.nav-btn-left{position:fixed;top:32px;left:32px;z-index:10001}
+.nav-btn-lang{width:54px}
 .live-demo{margin-top:20px;width:100%;max-width:1400px;margin-left:auto;margin-right:auto}
 .section-title{font-family:var(--fd);font-size:2.8rem;font-weight:900;text-align:center;margin-bottom:48px;letter-spacing:-0.02em}
 .demo-stack{display:flex;flex-direction:column;gap:64px;width:100%}
@@ -461,12 +460,12 @@ body.hide-cursor,body.hide-cursor *{cursor:none!important}
 <div id="ether-bg"></div>
 <div id="root"></div>
 
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"><\/script>
+<script src="https://unpkg.com/three@0.149.0/build/three.min.js"><\/script>
 <script>
 ${etherCode}
 <\/script>
 <script>
-document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('ether-bg');if(b&&typeof LiquidEtherEngine!=='undefined'){try{new LiquidEtherEngine(b,{colors:['#FF2A54','#a78bfa','#38BDF8'],autoIntensity:1.5})}catch(e){console.warn('LiquidEther:',e)}}});
+document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('ether-bg');if(b&&typeof LiquidEtherEngine!=='undefined'){try{new LiquidEtherEngine(b,{colors:['#FF2A54','#a78bfa','#38BDF8'],autoIntensity:1.5,resolution:0.3,iterations_poisson:16,BFECC:false})}catch(e){console.warn('LiquidEther:',e)}}});
 <\/script>
 <script>window.__COUNTS__=${JSON.stringify(counts)};<\/script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin><\/script>

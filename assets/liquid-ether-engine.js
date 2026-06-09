@@ -264,6 +264,11 @@
   }
   MouseController.prototype.init = function (container) {
     this.container = container;
+    this.containerRect = this.container.getBoundingClientRect();
+    this._onResize = function () {
+      if (this.container) this.containerRect = this.container.getBoundingClientRect();
+    }.bind(this);
+    window.addEventListener('resize', this._onResize);
     window.addEventListener('mousemove', this._onMouseMove);
     window.addEventListener('touchstart', this._onTouchStart, { passive: true });
     window.addEventListener('touchmove', this._onTouchMove, { passive: true });
@@ -271,22 +276,24 @@
     document.addEventListener('mouseleave', this._onLeave);
   };
   MouseController.prototype.dispose = function () {
+    window.removeEventListener('resize', this._onResize);
     window.removeEventListener('mousemove', this._onMouseMove);
     window.removeEventListener('touchstart', this._onTouchStart);
     window.removeEventListener('touchmove', this._onTouchMove);
     window.removeEventListener('touchend', this._onTouchEnd);
     document.removeEventListener('mouseleave', this._onLeave);
     this.container = null;
+    this.containerRect = null;
   };
   MouseController.prototype._isInside = function (cx, cy) {
-    if (!this.container) return false;
-    var r = this.container.getBoundingClientRect();
+    if (!this.container || !this.containerRect) return false;
+    var r = this.containerRect;
     return cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom;
   };
   MouseController.prototype._setCoords = function (x, y) {
-    if (!this.container) return;
+    if (!this.container || !this.containerRect) return;
     if (this.timer) clearTimeout(this.timer);
-    var r = this.container.getBoundingClientRect();
+    var r = this.containerRect;
     if (!r.width || !r.height) return;
     this.coords.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height * 2 - 1));
     this.mouseMoved = true;
@@ -300,8 +307,8 @@
     if (!this.isHoverInside) return;
     if (this.onInteract) this.onInteract();
     if (this.isAutoActive && !this.hasUserControl && !this.takeoverActive) {
-      var r = this.container.getBoundingClientRect();
-      if (!r.width || !r.height) return;
+      var r = this.containerRect;
+      if (!r || !r.width || !r.height) return;
       this.takeoverFrom.copy(this.coords);
       this.takeoverTo.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1));
       this.takeoverStartTime = performance.now();
@@ -632,7 +639,7 @@
 
     var paletteTex = makePaletteTexture(this._colors);
     var bgVec4 = new THREE.Vector4(0, 0, 0, 0);
-    this._simulation = new Simulation(this._common, this._mouse);
+    this._simulation = new Simulation(this._common, this._mouse, opts);
     this._output = new OutputRenderer(this._common, this._simulation, paletteTex, bgVec4);
 
     this._running = false;
@@ -640,6 +647,8 @@
     this._loop = this._loopFn.bind(this);
     this._resizeHandler = this._onResize.bind(this);
     window.addEventListener('resize', this._resizeHandler);
+
+
 
     this._visHandler = function () {
       if (document.hidden) this.pause(); else this.start();
@@ -684,7 +693,16 @@
     this._rafId = requestAnimationFrame(this._loop);
   };
   LiquidEtherEngine.prototype.start = function () {
-    if (this._running) return; this._running = true; this._loop();
+    if (this._running) return;
+    this._running = true;
+    if (this._mouse) {
+      this._mouse.diff.set(0, 0);
+      this._mouse.coords_old.copy(this._mouse.coords);
+    }
+    if (this._autoDriver) {
+      this._autoDriver.lastTime = performance.now();
+    }
+    this._loop();
   };
   LiquidEtherEngine.prototype.pause = function () {
     this._running = false;
@@ -692,6 +710,7 @@
   };
   LiquidEtherEngine.prototype.dispose = function () {
     this.pause();
+
     window.removeEventListener('resize', this._resizeHandler);
     document.removeEventListener('visibilitychange', this._visHandler);
     window.removeEventListener('themechange', this._themeHandler);

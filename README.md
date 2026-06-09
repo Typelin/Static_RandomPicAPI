@@ -90,6 +90,11 @@ node build.js
 - `dist/`：建置產物目錄（部署此文件夾至 Cloudflare Pages / GitHub Pages）。
 - `config.json`：域名與環境配置。
 
+## ⚠️ 免責聲明 (Disclaimer)
+本項目**不主張任何圖像的所有權**。全部圖片都能以「以圖搜圖」找到原作者，僅作為背景 API 調用。如有侵權，請透過 [typelin.pages.dev](https://typelin.pages.dev/#footer) 聯繫我。
+
+> This project does not claim ownership of any images. All images can be traced to their original authors via reverse image search and are used only as background API assets. For copyright concerns, please contact me via [typelin.pages.dev](https://typelin.pages.dev/#footer).
+
 ## 📍 參考與鳴謝
 - **原專案作者**：[afoim](https://github.com/afoim/Static_RandomPicAPI)
 - **技術棧**：Node.js, Masonry.js, Lozad.js, Cloudflare Pages.
