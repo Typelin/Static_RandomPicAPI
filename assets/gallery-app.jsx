@@ -1,3 +1,4 @@
+/** @jsxRuntime classic */
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
 function useTheme() {

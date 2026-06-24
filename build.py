@@ -181,12 +181,7 @@ def main():
     with open(os.path.join(DIST, 'random.js'), 'w', encoding='utf-8') as f:
         f.write(js_content.strip())
         
-    index_src = os.path.join(ROOT, 'index.html')
-    if os.path.exists(index_src) and os.path.getsize(index_src) > 0:
-        shutil.copy2(index_src, os.path.join(DIST, 'index.html'))
-        print('Copied index.html to dist')
-    else:
-        create_demo_html()
+    create_premium_html(counts)
 
     api_data = {
         'lastBuild': datetime.utcnow().isoformat() + 'Z',
@@ -329,7 +324,7 @@ def create_gallery_html(counts, config):
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     
     <script type="text/babel" src="lib/LiquidEther.jsx"></script>
@@ -399,48 +394,111 @@ def create_gallery_html(counts, config):
         f.write(html_content)
     print('Created gallery.html in dist')
 
-def create_demo_html():
-    html_content = """<!DOCTYPE html>
-<html lang="zh-CN">
+def create_premium_html(counts):
+    home_app_path = os.path.join(ROOT, 'assets', 'home-app.jsx')
+    liquid_ether_path = os.path.join(ROOT, 'assets', 'liquid-ether-engine.js')
+    
+    with open(home_app_path, 'r', encoding='utf-8') as f:
+        home_code = f.read()
+    with open(liquid_ether_path, 'r', encoding='utf-8') as f:
+        ether_code = f.read()
+
+    html = """<!DOCTYPE html>
+<html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Static Random Pic API Demo</title>
-    <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
-        .card { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
-        img { max-width: 100%; height: auto; border-radius: 4px; display: block; background: #eee; min-height: 200px; }
-        .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
-        .bg-box { width: 100%; height: 200px; background-size: cover; background-position: center; border-radius: 4px; border: 1px dashed #999; display: flex; align-items: center; justify-content: center; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Static Random Pic API - Premium Delivery</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖼️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--a:#a78bfa;--ap:#f472b6;--ag:rgba(167,139,250,.35);--gl:rgba(255,255,255,.06);--gb:rgba(255,255,255,.1);--bg:#07070f;--text:#e2e8f0;--card-bg:rgba(255,255,255,.02);--card-border:rgba(255,255,255,.06);--card-hover:rgba(255,255,255,.15);--btn-bg:rgba(255,255,255,.9);--btn-text:#0f0f1a;--btn-sec-bg:var(--gl);--btn-sec-text:#fff;--nav-btn-bg:rgba(255,255,255,.06);--f:'Inter',system-ui,sans-serif;--fd:'Outfit',sans-serif;--e:cubic-bezier(.4,0,.2,1)}
+:root[data-theme='light']{--a:#8b5cf6;--ap:#ec4899;--ag:rgba(139,92,246,.25);--gl:rgba(0,0,0,.04);--gb:rgba(0,0,0,.1);--bg:#f8fafc;--text:#0f172a;--card-bg:rgba(255,255,255,.6);--card-border:rgba(0,0,0,.08);--card-hover:rgba(0,0,0,.15);--btn-bg:#0f172a;--btn-text:#fff;--btn-sec-bg:var(--gl);--btn-sec-text:#0f172a;--nav-btn-bg:rgba(0,0,0,.05)}
+html{scroll-behavior:smooth;overflow-y:scroll;min-height:100.1vh}
+body{font-family:var(--f);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .4s var(--e),color .4s var(--e)}
+body.hide-cursor,body.hide-cursor *{cursor:none!important}
+#ether-bg{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+.cur-dot{position:fixed;top:-6px;left:-6px;width:12px;height:12px;border-radius:50%;background:var(--a);pointer-events:none;z-index:99999;mix-blend-mode:difference;transition:width .2s,height .2s,top .2s,left .2s,background .2s}
+.cur-dot.h{width:44px;height:44px;top:-22px;left:-22px;background:rgba(167,139,250,.12);border:1.5px solid var(--a)}
+.cur-ring{position:fixed;top:-22px;left:-22px;width:44px;height:44px;border-radius:50%;border:1px solid rgba(167,139,250,.25);pointer-events:none;z-index:99998;transition:width .3s,height .3s,top .3s,left .3s,border-color .3s,opacity .3s}
+.cur-ring.h{width:64px;height:64px;top:-32px;left:-32px;border-color:rgba(244,114,182,.35);opacity:.4}
+@media(hover:none){.cur-dot,.cur-ring{display:none!important}body.hide-cursor,body.hide-cursor *{cursor:auto!important}}
+.app{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:40px 24px 120px;min-height:100vh;overflow-anchor:none}
+.flex-col{display:flex;flex-direction:column;align-items:center}
+.hero{text-align:center;padding:8vh 0 10vh}
+.nav-group-right{position:fixed;top:32px;right:32px;z-index:10001;display:flex;gap:12px}
+.nav-btn{width:48px;height:48px;border-radius:50%;background:var(--nav-btn-bg);border:1px solid var(--gb);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s var(--e);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);text-decoration:none;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.nav-btn:hover{transform:translateY(-2px) scale(1.1);box-shadow:0 12px 48px var(--ag);border-color:var(--a)}
+.nav-btn-lang{width:54px}
+.hero-title{font-family:var(--fd);font-size:clamp(2.5rem,8vw,5rem);font-weight:800;letter-spacing:-1px;margin-bottom:24px;background:linear-gradient(135deg,var(--text) 0%,var(--a) 50%,var(--ap) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;padding:20px 0}
+.hero-title span{display:inline-block;background:inherit;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:float 4s ease-in-out infinite;vertical-align:middle}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hero-sub{font-size:clamp(1rem,3vw,1.3rem);color:var(--text);opacity:.6;font-weight:300;letter-spacing:1px;margin-bottom:48px;max-width:600px;margin-left:auto;margin-right:auto}
+.hero-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;max-width:900px;margin:0 auto}
+.btn-primary,.btn-secondary{font-family:var(--f);padding:14px 28px;border-radius:999px;font-size:0.95rem;font-weight:600;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:all .3s var(--e);text-decoration:none;display:flex;align-items:center;gap:10px;white-space:nowrap}
+.btn-primary{background:var(--btn-bg);color:var(--btn-text);border:1px solid transparent;box-shadow:0 0 25px var(--ag)}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 10px 40px var(--ag);border-color:var(--gb)}
+.btn-secondary{background:var(--btn-sec-bg);color:var(--btn-sec-text);border:1px solid var(--gb)}
+.nav-group-right{position:fixed;top:32px;right:32px;z-index:10001;display:flex;gap:12px}
+.nav-group-left{position:fixed;top:32px;left:32px;z-index:10001;display:flex;gap:12px}
+.nav-btn-right{position:fixed;top:32px;right:32px;z-index:10001}
+.nav-btn-left{position:fixed;top:32px;left:32px;z-index:10001}
+.nav-btn-lang{width:54px}
+.live-demo{margin-top:20px;width:100%;max-width:1400px;margin-left:auto;margin-right:auto}
+.section-title{font-family:var(--fd);font-size:2.8rem;font-weight:900;text-align:center;margin-bottom:48px;letter-spacing:-0.02em}
+.demo-stack{display:flex;flex-direction:column;gap:64px;width:100%}
+.v-card-wrap{width:100%;display:flex;justify-content:center}
+.v-card-wrap .demo-card{width:100%;max-width:720px}
+.demo-card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:32px;padding:48px;transition:transform .15s ease-out,box-shadow .4s var(--e),background .4s var(--e),border-color .4s var(--e);transform-style:preserve-3d;will-change:transform;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);contain:layout}
+.demo-card:hover{box-shadow:0 30px 80px rgba(0,0,0,.2),0 0 40px var(--ag);border-color:var(--card-hover);background:var(--card-hover);z-index:2}
+.demo-header{margin-bottom:20px}
+.demo-header h3{font-family:var(--fd);font-size:1.8rem;color:var(--text);font-weight:700;margin-bottom:8px}
+.code-hint{font-family:monospace;font-size:.85rem;color:var(--text);opacity:.7;background:var(--gl);padding:6px 14px;border-radius:6px;display:inline-block;border:1px solid var(--gb)}
+.demo-img-box{position:relative;width:100%;border-radius:12px;overflow:hidden;background:rgba(0,0,0,.05);cursor:pointer;contain:size layout;display:block}
+.demo-img-box img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .6s var(--e);display:block;backface-visibility:hidden}
+.demo-img-box img.ok{opacity:1}
+.demo-img-box .shim{position:absolute;inset:0;z-index:1;background:linear-gradient(110deg,rgba(255,255,255,.02) 30%,rgba(255,255,255,.06) 50%,rgba(255,255,255,.02) 70%);background-size:200% 100%;animation:shm 1.5s ease-in-out infinite;pointer-events:none}
+.refresh-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,.7);backdrop-filter:blur(12px);color:#fff;font-size:.75rem;padding:8px 20px;border-radius:99px;opacity:0;transition:all .3s var(--e);border:1px solid rgba(255,255,255,.1);pointer-events:none;z-index:2}
+.demo-card:hover .refresh-hint{opacity:1;transform:translateX(-50%) translateY(0)}
+.shine{position:absolute;inset:0;background:radial-gradient(circle at var(--sx,50%) var(--sy,50%),rgba(255,255,255,.12),transparent 50%);opacity:0;transition:opacity .3s;pointer-events:none;z-index:3}
+.demo-card:hover .shine{opacity:1}
+.shim{position:absolute;inset:0;background:linear-gradient(110deg,rgba(255,255,255,.02) 30%,rgba(255,255,255,.06) 50%,rgba(255,255,255,.02) 70%);background-size:200% 100%;animation:shm 1.5s ease-in-out infinite}
+@keyframes shm{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
 </head>
 <body>
-    <h1>Static Random Pic API (Client-Side)</h1>
-    <p>
-        This is a static implementation. Images are randomized at build time.
-        <a href="gallery.html" class="btn" style="float: right;">View Gallery</a>
-    </p>
+<div id="ether-bg"></div>
+<div id="root"></div>
 
-    <div class="card">
-        <h2>Horizontal Image (横屏)</h2>
-        <p>Using <code>&lt;img alt="random:h"&gt;</code>:</p>
-        <img alt="random:h" title="Random Horizontal Image" />
-        <br>
-        <p>Background Image (<code>data-random-bg="h"</code>):</p>
-        <div class="bg-box" data-random-bg="h">Background Image</div>
-    </div>
-
-    <div class="card">
-        <h2>Vertical Image (竖屏)</h2>
-        <p>Using <code>&lt;img alt="random:v"&gt;</code>:</p>
-        <img alt="random:v" style="max-height: 400px;" title="Random Vertical Image" />
-    </div>
-    <script src="random.js"></script>
+<script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+<script>
+{ETHER_CODE}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('ether-bg');if(b&&typeof LiquidEtherEngine!=='undefined'){try{new LiquidEtherEngine(b,{colors:['#FF2A54','#a78bfa','#38BDF8'],autoIntensity:1.5,resolution:0.3,iterations_poisson:16,BFECC:false})}catch(e){console.warn('LiquidEther:',e)}}});
+</script>
+<script>window.__COUNTS__={COUNTS_JSON};</script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
+<script type="text/babel">
+{HOME_CODE}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<HomeApp />);
+</script>
 </body>
 </html>"""
+
+    html = html.replace('{ETHER_CODE}', ether_code)
+    html = html.replace('{COUNTS_JSON}', json.dumps(counts))
+    html = html.replace('{HOME_CODE}', home_code)
+    
     with open(os.path.join(DIST, 'index.html'), 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    print('Created demo index.html in dist')
+        f.write(html)
+    print('Created premium index.html (React 18) in dist via python')
 
 if __name__ == "__main__":
     main()

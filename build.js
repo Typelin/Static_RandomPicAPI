@@ -376,7 +376,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--text);min-height:100v
 <script>window.__GALLERY_DATA__=${JSON.stringify(imageData)};</script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
 <script type="text/babel">
 ${appCode}
 </script>
@@ -470,7 +470,7 @@ document.addEventListener('DOMContentLoaded',function(){var b=document.getElemen
 <script>window.__COUNTS__=${JSON.stringify(counts)};<\/script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin><\/script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin><\/script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+<script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"><\/script>
 <script type="text/babel">
 ${homeCode}
 const root = ReactDOM.createRoot(document.getElementById('root'));
